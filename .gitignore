@@ -20,3 +20,10 @@ benchmarks/lfwe
 venv
 **/.env
 docker/weaviate_data
+.deepface_home/
+.python312/
+.venv/
+db/
+face_db/
+python-*.exe
+websocket-demo/__pycache__/

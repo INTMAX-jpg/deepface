@@ -1,0 +1,1656 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeepFace 实时情绪分析控制台</title>
+    <style>
+        :root {
+            color-scheme: dark;
+            --bg: #08111f;
+            --bg-elevated: rgba(11, 22, 40, 0.82);
+            --bg-soft: rgba(18, 32, 56, 0.72);
+            --line: rgba(255, 255, 255, 0.08);
+            --line-strong: rgba(90, 183, 255, 0.35);
+            --text: #f3f7ff;
+            --text-muted: #96a9c7;
+            --accent: #5ab7ff;
+            --accent-strong: #7effc4;
+            --danger: #ff6978;
+            --warning: #ffcf70;
+            --shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+            --radius-xl: 28px;
+            --radius-lg: 18px;
+            --radius-md: 14px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(circle at top left, rgba(90, 183, 255, 0.18), transparent 32%),
+                radial-gradient(circle at top right, rgba(126, 255, 196, 0.1), transparent 26%),
+                linear-gradient(180deg, #08111f 0%, #0b1628 50%, #08111f 100%);
+        }
+
+        .page {
+            max-width: 1480px;
+            margin: 0 auto;
+            padding: 32px 24px 40px;
+        }
+
+        .hero {
+            display: flex;
+            justify-content: space-between;
+            gap: 24px;
+            align-items: flex-start;
+            margin-bottom: 24px;
+        }
+
+        .hero-copy h1 {
+            margin: 0;
+            font-size: clamp(2rem, 4vw, 3.1rem);
+            line-height: 1.05;
+            letter-spacing: -0.03em;
+        }
+
+        .hero-copy p {
+            margin: 12px 0 0;
+            max-width: 780px;
+            color: var(--text-muted);
+            font-size: 1rem;
+        }
+
+        .hero-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .badge {
+            padding: 10px 14px;
+            border-radius: 999px;
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--text-muted);
+            font-size: 0.92rem;
+            white-space: nowrap;
+        }
+
+        .badge.live {
+            color: var(--accent-strong);
+            border-color: rgba(126, 255, 196, 0.28);
+            background: rgba(126, 255, 196, 0.08);
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1.7fr) minmax(360px, 0.95fr);
+            gap: 24px;
+        }
+
+        .panel {
+            background: var(--bg-elevated);
+            border: 1px solid var(--line);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(18px);
+        }
+
+        .video-panel {
+            padding: 22px;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+
+        .panel-title {
+            margin: 0;
+            font-size: 1.12rem;
+        }
+
+        .panel-subtitle {
+            margin-top: 6px;
+            color: var(--text-muted);
+            font-size: 0.92rem;
+        }
+
+        .status-pill {
+            padding: 10px 14px;
+            border-radius: 999px;
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--text-muted);
+            font-size: 0.92rem;
+        }
+
+        .status-pill.connected {
+            color: var(--accent-strong);
+            border-color: rgba(126, 255, 196, 0.28);
+            background: rgba(126, 255, 196, 0.1);
+        }
+
+        .status-pill.warning {
+            color: var(--warning);
+            border-color: rgba(255, 207, 112, 0.28);
+            background: rgba(255, 207, 112, 0.08);
+        }
+
+        .status-pill.error {
+            color: #ffd4da;
+            border-color: rgba(255, 105, 120, 0.28);
+            background: rgba(255, 105, 120, 0.1);
+        }
+
+        .video-stage {
+            position: relative;
+            aspect-ratio: 4 / 3;
+            border-radius: 24px;
+            overflow: hidden;
+            background: linear-gradient(180deg, rgba(6, 10, 18, 0.9), rgba(13, 22, 35, 0.95));
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        #video,
+        #overlay {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        #video {
+            object-fit: cover;
+            background: #030712;
+        }
+
+        #overlay {
+            pointer-events: none;
+        }
+
+        .video-empty {
+            position: absolute;
+            inset: 0;
+            display: grid;
+            place-items: center;
+            text-align: center;
+            padding: 24px;
+            color: var(--text-muted);
+            background: linear-gradient(180deg, rgba(8, 17, 31, 0.32), rgba(8, 17, 31, 0.86));
+            transition: opacity 0.24s ease;
+        }
+
+        .video-empty.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .video-empty strong {
+            display: block;
+            color: var(--text);
+            font-size: 1.05rem;
+            margin-bottom: 8px;
+        }
+
+        .video-hud {
+            position: absolute;
+            left: 16px;
+            right: 16px;
+            bottom: 16px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            z-index: 2;
+        }
+
+        .hud-chip {
+            min-width: 116px;
+            padding: 12px 14px;
+            border-radius: 14px;
+            background: rgba(6, 12, 22, 0.72);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(10px);
+        }
+
+        .hud-chip span {
+            display: block;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .hud-chip strong {
+            font-size: 1rem;
+            font-weight: 700;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px;
+            margin-top: 18px;
+        }
+
+        button,
+        select,
+        input {
+            font: inherit;
+        }
+
+        .btn {
+            border: 1px solid transparent;
+            border-radius: 14px;
+            padding: 14px 16px;
+            cursor: pointer;
+            transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, opacity 0.18s ease;
+        }
+
+        .btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+        }
+
+        .btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.52;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), #7ca8ff);
+            color: #03111f;
+            font-weight: 700;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text);
+            border-color: var(--line);
+        }
+
+        .btn-danger {
+            background: rgba(255, 105, 120, 0.12);
+            color: #ffd4da;
+            border-color: rgba(255, 105, 120, 0.26);
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--text-muted);
+            border-color: var(--line);
+        }
+
+        .aside {
+            display: grid;
+            gap: 24px;
+            align-content: start;
+        }
+
+        .stack {
+            padding: 22px;
+        }
+
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px;
+            margin-top: 18px;
+        }
+
+        .metric-card {
+            padding: 16px;
+            border-radius: 16px;
+            background: var(--bg-soft);
+            border: 1px solid var(--line);
+        }
+
+        .metric-card span {
+            display: block;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .metric-card strong {
+            font-size: 1.35rem;
+            letter-spacing: -0.03em;
+        }
+
+        .metric-card small {
+            display: block;
+            margin-top: 8px;
+            color: var(--text-muted);
+            font-size: 0.82rem;
+        }
+
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px;
+            margin-top: 18px;
+        }
+
+        .field {
+            display: grid;
+            gap: 8px;
+        }
+
+        .field label {
+            color: var(--text-muted);
+            font-size: 0.86rem;
+        }
+
+        .field input,
+        .field select {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--text);
+            outline: none;
+        }
+
+        .field input:focus,
+        .field select:focus {
+            border-color: var(--line-strong);
+            box-shadow: 0 0 0 3px rgba(90, 183, 255, 0.16);
+        }
+
+        .inline-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 18px;
+        }
+
+        .helper-text {
+            margin-top: 14px;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        .switch-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 18px;
+        }
+
+        .switch {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--line);
+            color: var(--text-muted);
+        }
+
+        .switch input {
+            accent-color: var(--accent);
+        }
+
+        .bottom-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.9fr);
+            gap: 24px;
+            margin-top: 24px;
+        }
+
+        .distribution-list,
+        .face-list,
+        .event-list {
+            display: grid;
+            gap: 12px;
+            margin-top: 18px;
+        }
+
+        .face-item,
+        .event-item {
+            padding: 16px;
+            border-radius: 16px;
+            background: var(--bg-soft);
+            border: 1px solid var(--line);
+        }
+
+        .face-item h4,
+        .event-item h4 {
+            margin: 0 0 10px;
+            font-size: 1rem;
+        }
+
+        .face-meta {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .kv {
+            padding: 10px 12px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .kv span {
+            display: block;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .distribution-item {
+            display: grid;
+            gap: 8px;
+            padding: 12px 14px;
+            border-radius: 16px;
+            background: var(--bg-soft);
+            border: 1px solid var(--line);
+        }
+
+        .distribution-top {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .bar-track {
+            overflow: hidden;
+            height: 10px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .bar-fill {
+            height: 100%;
+            border-radius: inherit;
+            background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+        }
+
+        .event-item {
+            display: grid;
+            gap: 8px;
+        }
+
+        .event-meta {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            color: var(--text-muted);
+            font-size: 0.82rem;
+        }
+
+        .empty-state {
+            padding: 24px;
+            border-radius: 16px;
+            text-align: center;
+            color: var(--text-muted);
+            border: 1px dashed var(--line);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        @media (max-width: 1180px) {
+            .layout,
+            .bottom-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .aside {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 860px) {
+            .page {
+                padding: 20px 16px 28px;
+            }
+
+            .hero {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .hero-badges {
+                justify-content: flex-start;
+            }
+
+            .controls,
+            .metric-grid,
+            .settings-grid,
+            .face-meta,
+            .aside {
+                grid-template-columns: 1fr;
+            }
+
+            .panel-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .video-hud {
+                left: 12px;
+                right: 12px;
+                bottom: 12px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="page">
+        <section class="hero">
+            <div class="hero-copy">
+                <h1>DeepFace 实时情绪分析控制台</h1>
+                <p>当前版本采用浏览器摄像头采集 + WebSocket 传输 + FFmpeg 解码 + DeepFace 检测与逐人脸属性分析，页面集中展示连接状态、实时人脸结果、统计分布与配置参数。</p>
+            </div>
+            <div class="hero-badges">
+                <div class="badge" id="liveBadge">待启动</div>
+                <div class="badge" id="detectorBadge">Detector: retinaface</div>
+                <div class="badge" id="streamBadge">640 x 480 / 10 FPS</div>
+            </div>
+        </section>
+
+        <section class="layout">
+            <div class="panel video-panel">
+                <div class="panel-header">
+                    <div>
+                        <h2 class="panel-title">实时视频舞台</h2>
+                        <div class="panel-subtitle">本地摄像头画面与服务端返回的识别框、主情绪和分析耗时。</div>
+                    </div>
+                    <div class="status-pill" id="statusPill">等待启动</div>
+                </div>
+
+                <div class="video-stage">
+                    <video id="video" autoplay muted playsinline></video>
+                    <canvas id="overlay"></canvas>
+                    <div class="video-empty" id="videoEmpty">
+                        <div>
+                            <strong>点击“开始识别”以申请摄像头权限</strong>
+                            服务启动后会通过 WebSocket 将 WebM 流发送到后端，并在右侧同步更新实时统计与识别结果。
+                        </div>
+                    </div>
+                    <div class="video-hud">
+                        <div class="hud-chip"><span>当前人脸数</span><strong id="hudFaceCount">0</strong></div>
+                        <div class="hud-chip"><span>主情绪</span><strong id="hudEmotion">等待数据</strong></div>
+                        <div class="hud-chip"><span>平均质量</span><strong id="hudQuality">-</strong></div>
+                        <div class="hud-chip"><span>分析耗时</span><strong id="hudLatency">-</strong></div>
+                    </div>
+                </div>
+
+                <div class="controls">
+                    <button class="btn btn-primary" id="startBtn">开始识别</button>
+                    <button class="btn btn-secondary" id="stopBtn" disabled>停止识别</button>
+                    <button class="btn btn-secondary" id="resetBtn">清空统计</button>
+                    <button class="btn btn-ghost" id="exportBtn">导出 JSON</button>
+                </div>
+
+                <div class="switch-row">
+                    <label class="switch"><input type="checkbox" id="showOverlay" checked>显示识别框</label>
+                    <label class="switch"><input type="checkbox" id="showStatsPanel" checked>显示统计面板</label>
+                </div>
+            </div>
+
+            <aside class="aside">
+                <section class="panel stack">
+                    <div>
+                        <h2 class="panel-title">会话概览</h2>
+                        <div class="panel-subtitle">服务状态、累计统计和最近一次分析摘要。</div>
+                    </div>
+                    <div class="metric-grid" id="metricGrid"></div>
+                </section>
+
+                <section class="panel stack">
+                    <div>
+                        <h2 class="panel-title">运行配置</h2>
+                        <div class="panel-subtitle">修改参数后点击保存配置；如果正在识别，系统会自动按新配置重启视频流。</div>
+                    </div>
+                    <div class="settings-grid">
+                        <div class="field">
+                            <label for="widthInput">宽度</label>
+                            <input id="widthInput" type="number" min="320" max="1280" step="1">
+                        </div>
+                        <div class="field">
+                            <label for="heightInput">高度</label>
+                            <input id="heightInput" type="number" min="240" max="960" step="1">
+                        </div>
+                        <div class="field">
+                            <label for="fpsInput">帧率 FPS</label>
+                            <input id="fpsInput" type="number" min="5" max="30" step="1">
+                        </div>
+                        <div class="field">
+                            <label for="intervalInput">分析间隔帧数</label>
+                            <input id="intervalInput" type="number" min="1" max="20" step="1">
+                        </div>
+                        <div class="field">
+                            <label for="chunkInput">切片间隔 ms</label>
+                            <input id="chunkInput" type="number" min="60" max="1000" step="10">
+                        </div>
+                        <div class="field">
+                            <label for="bitrateInput">码率 bps</label>
+                            <input id="bitrateInput" type="number" min="200000" max="5000000" step="10000">
+                        </div>
+                        <div class="field">
+                            <label for="timeoutInput">超时秒数</label>
+                            <input id="timeoutInput" type="number" min="10" max="120" step="1">
+                        </div>
+                        <div class="field">
+                            <label for="detectorSelect">检测后端</label>
+                            <select id="detectorSelect">
+                                <option value="retinaface">retinaface</option>
+                                <option value="opencv">opencv</option>
+                                <option value="mediapipe">mediapipe</option>
+                                <option value="mtcnn">mtcnn</option>
+                                <option value="centerface">centerface</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="smoothingEnabledSelect">高斯平滑</label>
+                            <select id="smoothingEnabledSelect">
+                                <option value="true">开启</option>
+                                <option value="false">关闭</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="smoothingWindowInput">平滑窗口 K</label>
+                            <input id="smoothingWindowInput" type="number" min="1" max="20" step="1">
+                        </div>
+                        <div class="field">
+                            <label for="smoothingSigmaInput">高斯 σ</label>
+                            <input id="smoothingSigmaInput" type="number" min="0.3" max="10" step="0.1">
+                        </div>
+                        <div class="field">
+                            <label for="qualityPenaltySelect">坏帧质量惩罚</label>
+                            <select id="qualityPenaltySelect">
+                                <option value="true">开启</option>
+                                <option value="false">关闭</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="noFaceGapInput">断裂：连续无脸帧</label>
+                            <input id="noFaceGapInput" type="number" min="1" max="60" step="1">
+                        </div>
+                        <div class="field">
+                            <label for="frameDiffInput">断裂：画面差异阈值</label>
+                            <input id="frameDiffInput" type="number" min="0.05" max="1" step="0.01">
+                        </div>
+                        <div class="field">
+                            <label for="identityEnabledSelect">人脸建档识别</label>
+                            <select id="identityEnabledSelect">
+                                <option value="true">开启</option>
+                                <option value="false">关闭</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="identityThresholdInput">身份距离阈值</label>
+                            <input id="identityThresholdInput" type="number" min="0.05" max="1.5" step="0.01">
+                        </div>
+                        <div class="field">
+                            <label for="adapterEnabledSelect">个体适配器</label>
+                            <select id="adapterEnabledSelect">
+                                <option value="true">开启</option>
+                                <option value="false">关闭</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="adapterBlendInput">适配器融合 λ</label>
+                            <input id="adapterBlendInput" type="number" min="0" max="0.85" step="0.05">
+                        </div>
+                    </div>
+                    <div class="inline-actions">
+                        <button class="btn btn-primary" id="saveConfigBtn">保存配置</button>
+                        <button class="btn btn-ghost" id="reloadConfigBtn">重新读取</button>
+                    </div>
+                    <div class="helper-text" id="configHint">配置尚未加载。</div>
+                </section>
+
+                <section class="panel stack">
+                    <div>
+                        <h2 class="panel-title">个体化表情建档</h2>
+                        <div class="panel-subtitle">本地保存人脸 embedding 与手动标注样本；识别到同一人物后，可用个人小模型微调表情输出。</div>
+                    </div>
+                    <div class="settings-grid">
+                        <div class="field">
+                            <label for="profileNameInput">新人物名称</label>
+                            <input id="profileNameInput" type="text" placeholder="例如：实验者A">
+                        </div>
+                        <div class="field">
+                            <label for="profileSelect">当前人物档案</label>
+                            <select id="profileSelect"></select>
+                        </div>
+                        <div class="field">
+                            <label for="sampleLabelSelect">手动表情标签</label>
+                            <select id="sampleLabelSelect">
+                                <option value="happy">happy / 高兴</option>
+                                <option value="neutral">neutral / 平静</option>
+                                <option value="surprise">surprise / 惊讶</option>
+                                <option value="sad">sad / 悲伤</option>
+                                <option value="angry">angry / 愤怒</option>
+                                <option value="fear">fear / 恐惧</option>
+                                <option value="disgust">disgust / 厌恶</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="sampleDurationInput">连续采样时长 / 秒</label>
+                            <input id="sampleDurationInput" type="number" min="2" max="20" step="1" value="5">
+                        </div>
+                        <div class="field">
+                            <label for="sampleQualityInput">最低质量分</label>
+                            <input id="sampleQualityInput" type="number" min="0" max="1" step="0.05" value="0.55">
+                        </div>
+                    </div>
+                    <div class="inline-actions">
+                        <button class="btn btn-secondary" id="refreshProfilesBtn">刷新档案</button>
+                        <button class="btn btn-primary" id="createProfileBtn">创建档案</button>
+                    </div>
+                    <div class="inline-actions">
+                        <button class="btn btn-secondary" id="captureFaceBtn">采集当前画面做人脸建档</button>
+                        <button class="btn btn-secondary" id="addSampleBtn">保存当前识别为标注样本</button>
+                        <button class="btn btn-secondary" id="batchSampleBtn">连续采样 5 秒</button>
+                        <button class="btn btn-primary" id="trainAdapterBtn">训练个人适配器</button>
+                    </div>
+                    <div class="helper-text" id="profileHint">未加载人物档案。提示：每人建议先采集 3~5 张清晰人脸，再为至少 2 类表情各保存数条样本。</div>
+                    <div class="helper-text" id="profileMetrics">样本分布与验证指标将在这里显示。</div>
+                </section>
+            </aside>
+        </section>
+
+        <section class="bottom-grid" id="statsSection">
+            <section class="panel stack">
+                <div>
+                    <h2 class="panel-title">情绪分布统计</h2>
+                    <div class="panel-subtitle">基于已完成分析的人脸主情绪累计结果，便于展示系统稳定性和现场状态变化。</div>
+                </div>
+                <div class="distribution-list" id="distributionList"></div>
+            </section>
+
+            <section class="panel stack">
+                <div>
+                    <h2 class="panel-title">最新识别结果</h2>
+                    <div class="panel-subtitle">展示当前帧中的逐人脸分析结果，并保留最近事件流方便调试与汇报。</div>
+                </div>
+                <div class="face-list" id="faceList"></div>
+                <div class="event-list" id="eventList"></div>
+            </section>
+        </section>
+    </div>
+
+    <script>
+        const state = {
+            ws: null,
+            stream: null,
+            mediaRecorder: null,
+            config: null,
+            stats: null,
+            latestPayload: null,
+            profiles: [],
+            samplingActive: false,
+            running: false,
+            reconnectAttempts: 0,
+            maxReconnectAttempts: 2,
+            autoReconnect: false,
+        };
+
+        const EMOTION_LABELS = {
+            happy: '高兴',
+            neutral: '平静',
+            surprise: '惊讶',
+            sad: '悲伤',
+            angry: '愤怒',
+            fear: '恐惧',
+            disgust: '厌恶',
+            none: '无'
+        };
+
+        const EMOTION_ORDER = ['happy', 'neutral', 'surprise', 'sad', 'angry', 'fear', 'disgust'];
+
+        const els = {
+            video: document.getElementById('video'),
+            overlay: document.getElementById('overlay'),
+            videoEmpty: document.getElementById('videoEmpty'),
+            statusPill: document.getElementById('statusPill'),
+            liveBadge: document.getElementById('liveBadge'),
+            detectorBadge: document.getElementById('detectorBadge'),
+            streamBadge: document.getElementById('streamBadge'),
+            hudFaceCount: document.getElementById('hudFaceCount'),
+            hudEmotion: document.getElementById('hudEmotion'),
+            hudQuality: document.getElementById('hudQuality'),
+            hudLatency: document.getElementById('hudLatency'),
+            startBtn: document.getElementById('startBtn'),
+            stopBtn: document.getElementById('stopBtn'),
+            resetBtn: document.getElementById('resetBtn'),
+            exportBtn: document.getElementById('exportBtn'),
+            showOverlay: document.getElementById('showOverlay'),
+            showStatsPanel: document.getElementById('showStatsPanel'),
+            metricGrid: document.getElementById('metricGrid'),
+            distributionList: document.getElementById('distributionList'),
+            faceList: document.getElementById('faceList'),
+            eventList: document.getElementById('eventList'),
+            statsSection: document.getElementById('statsSection'),
+            widthInput: document.getElementById('widthInput'),
+            heightInput: document.getElementById('heightInput'),
+            fpsInput: document.getElementById('fpsInput'),
+            intervalInput: document.getElementById('intervalInput'),
+            chunkInput: document.getElementById('chunkInput'),
+            bitrateInput: document.getElementById('bitrateInput'),
+            timeoutInput: document.getElementById('timeoutInput'),
+            detectorSelect: document.getElementById('detectorSelect'),
+            smoothingEnabledSelect: document.getElementById('smoothingEnabledSelect'),
+            smoothingWindowInput: document.getElementById('smoothingWindowInput'),
+            smoothingSigmaInput: document.getElementById('smoothingSigmaInput'),
+            qualityPenaltySelect: document.getElementById('qualityPenaltySelect'),
+            noFaceGapInput: document.getElementById('noFaceGapInput'),
+            frameDiffInput: document.getElementById('frameDiffInput'),
+            identityEnabledSelect: document.getElementById('identityEnabledSelect'),
+            identityThresholdInput: document.getElementById('identityThresholdInput'),
+            adapterEnabledSelect: document.getElementById('adapterEnabledSelect'),
+            adapterBlendInput: document.getElementById('adapterBlendInput'),
+            saveConfigBtn: document.getElementById('saveConfigBtn'),
+            reloadConfigBtn: document.getElementById('reloadConfigBtn'),
+            configHint: document.getElementById('configHint'),
+            profileNameInput: document.getElementById('profileNameInput'),
+            profileSelect: document.getElementById('profileSelect'),
+            sampleLabelSelect: document.getElementById('sampleLabelSelect'),
+            sampleDurationInput: document.getElementById('sampleDurationInput'),
+            sampleQualityInput: document.getElementById('sampleQualityInput'),
+            refreshProfilesBtn: document.getElementById('refreshProfilesBtn'),
+            createProfileBtn: document.getElementById('createProfileBtn'),
+            captureFaceBtn: document.getElementById('captureFaceBtn'),
+            addSampleBtn: document.getElementById('addSampleBtn'),
+            batchSampleBtn: document.getElementById('batchSampleBtn'),
+            trainAdapterBtn: document.getElementById('trainAdapterBtn'),
+            profileHint: document.getElementById('profileHint'),
+            profileMetrics: document.getElementById('profileMetrics')
+        };
+
+        function setStatus(kind, text) {
+            els.statusPill.className = 'status-pill';
+            if (kind) {
+                els.statusPill.classList.add(kind);
+            }
+            els.statusPill.textContent = text;
+        }
+
+        function setHeroBadges() {
+            if (!state.config) {
+                return;
+            }
+            els.detectorBadge.textContent = `Detector: ${state.config.detector_backend}`;
+            els.streamBadge.textContent = `${state.config.width} x ${state.config.height} / ${state.config.fps} FPS`;
+            els.liveBadge.textContent = state.running ? '识别进行中' : '待启动';
+            els.liveBadge.className = `badge ${state.running ? 'live' : ''}`.trim();
+        }
+
+        function syncConfigForm(config) {
+            els.widthInput.value = config.width;
+            els.heightInput.value = config.height;
+            els.fpsInput.value = config.fps;
+            els.intervalInput.value = config.analyze_interval;
+            els.chunkInput.value = config.chunk_ms;
+            els.bitrateInput.value = config.video_bits_per_second;
+            els.timeoutInput.value = config.timeout_seconds;
+            els.detectorSelect.value = config.detector_backend;
+            els.smoothingEnabledSelect.value = String(config.smoothing_enabled ?? true);
+            els.smoothingWindowInput.value = config.smoothing_window ?? 5;
+            els.smoothingSigmaInput.value = config.smoothing_sigma ?? 2.0;
+            els.qualityPenaltySelect.value = String(config.quality_penalty_enabled ?? true);
+            els.noFaceGapInput.value = config.continuity_no_face_gap ?? 5;
+            els.frameDiffInput.value = config.continuity_frame_diff_threshold ?? 0.48;
+            els.identityEnabledSelect.value = String(config.identity_enabled ?? true);
+            els.identityThresholdInput.value = config.identity_threshold ?? 0.35;
+            els.adapterEnabledSelect.value = String(config.adapter_enabled ?? true);
+            els.adapterBlendInput.value = config.adapter_blend ?? 0.55;
+            els.configHint.textContent = '配置已同步：高斯平滑、质量惩罚、断裂截断、人脸建档和个体适配器均可调。';
+            setHeroBadges();
+        }
+
+        function renderMetrics() {
+            const stats = state.stats || {};
+            const summary = state.latestPayload?.summary || {};
+            const metrics = [
+                ['连接状态', state.running ? '在线' : '未运行', state.running ? 'WebSocket 和摄像头均处于活动状态' : '等待用户启动会话'],
+                ['累计分析帧', stats.analyzed_frames ?? 0, `成功结果 ${stats.successful_analyses ?? 0} / 无脸 ${stats.no_face_events ?? 0}`],
+                ['当前主情绪', EMOTION_LABELS[summary.dominant_emotion] || summary.dominant_emotion || '无', `最近结果时间 ${stats.last_result_at || '-'}`],
+                ['当前人脸数', summary.faces_detected ?? 0, `平均质量 ${summary.average_quality ?? '-'} / 耗时 ${summary.analysis_duration_ms ?? '-'} ms`],
+                ['累计帧数', stats.total_frames_received ?? 0, `收到数据块 ${stats.total_chunks_received ?? 0}`],
+                ['在线客户端', stats.active_clients ?? 0, `统计运行 ${Math.round(stats.uptime_seconds || 0)} 秒`],
+            ];
+            els.metricGrid.innerHTML = metrics.map(([label, value, helper]) => `
+                <div class="metric-card">
+                    <span>${label}</span>
+                    <strong>${value}</strong>
+                    <small>${helper}</small>
+                </div>
+            `).join('');
+        }
+
+        function renderDistribution() {
+            const distribution = state.stats?.emotion_distribution || {};
+            const total = Object.values(distribution).reduce((sum, value) => sum + value, 0);
+            const ordered = Object.entries(distribution).sort((a, b) => b[1] - a[1]);
+            if (!ordered.length || total === 0) {
+                els.distributionList.innerHTML = '<div class="empty-state">尚无统计数据，开始识别后会在这里显示情绪累计分布。</div>';
+                return;
+            }
+            els.distributionList.innerHTML = ordered.map(([emotion, count]) => {
+                const percent = total ? ((count / total) * 100).toFixed(1) : '0.0';
+                return `
+                    <div class="distribution-item">
+                        <div class="distribution-top">
+                            <strong>${EMOTION_LABELS[emotion] || emotion}</strong>
+                            <span>${count} 次 / ${percent}%</span>
+                        </div>
+                        <div class="bar-track"><div class="bar-fill" style="width:${percent}%"></div></div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderFaces() {
+            const faces = state.latestPayload?.faces || [];
+            if (!faces.length) {
+                els.faceList.innerHTML = '<div class="empty-state">最近一次分析没有检测到可用人脸，或尚未开始识别。</div>';
+                return;
+            }
+            els.faceList.innerHTML = faces.map((face, index) => {
+                const personText = face.person_name ? `${face.person_name} (${face.identity_confidence || 0}%)` : '未匹配';
+                const rawText = `${EMOTION_LABELS[face.raw_emotion] || face.raw_emotion || '-'} (${face.raw_e_conf ?? '-'}%)`;
+                const smoothText = `${EMOTION_LABELS[face.emotion] || face.emotion} (${face.e_conf}%)`;
+                const adapterText = face.personalized && face.adapter_prediction
+                    ? `${EMOTION_LABELS[face.adapter_prediction.emotion] || face.adapter_prediction.emotion} / λ=${face.adapter_prediction.blend}`
+                    : '未启用或无模型';
+                return `
+                    <article class="face-item">
+                        <h4>人脸 ${index + 1} · ${face.track_id || 'track'} · segment ${face.segment_id ?? '-'}</h4>
+                        <div class="face-meta">
+                            <div class="kv"><span>质量</span><strong>${Math.round((face.quality_score || 0) * 100)}%</strong></div>
+                            <div class="kv"><span>人脸置信</span><strong>${face.face_conf ?? '-'}</strong></div>
+                            <div class="kv"><span>原始情绪</span><strong>${rawText}</strong></div>
+                            <div class="kv"><span>平滑情绪</span><strong>${smoothText}</strong></div>
+                            <div class="kv"><span>质量分</span><strong>${Math.round((face.quality_score || 0) * 100)}%</strong></div>
+                            <div class="kv"><span>人物匹配</span><strong>${personText}</strong></div>
+                            <div class="kv"><span>个人适配</span><strong>${adapterText}</strong></div>
+                            <div class="kv"><span>位置</span><strong>${face.area.x}, ${face.area.y}, ${face.area.w} x ${face.area.h}</strong></div>
+                        </div>
+                    </article>
+                `;
+            }).join('');
+        }
+
+        function renderEvents() {
+            const events = state.stats?.recent_events || [];
+            if (!events.length) {
+                els.eventList.innerHTML = '<div class="empty-state">最近事件流为空。</div>';
+                return;
+            }
+            els.eventList.innerHTML = events.map((event) => `
+                <article class="event-item">
+                    <div class="event-meta">
+                        <strong>${event.level.toUpperCase()}</strong>
+                        <span>${event.timestamp}</span>
+                    </div>
+                    <div>${event.message}</div>
+                </article>
+            `).join('');
+        }
+
+        function updateHud() {
+            const summary = state.latestPayload?.summary || {};
+            els.hudFaceCount.textContent = summary.faces_detected ?? 0;
+            els.hudEmotion.textContent = EMOTION_LABELS[summary.dominant_emotion] || summary.dominant_emotion || '等待数据';
+            els.hudQuality.textContent = summary.average_quality ? `${Math.round(summary.average_quality * 100)}%` : '-';
+            els.hudLatency.textContent = summary.analysis_duration_ms ? `${summary.analysis_duration_ms} ms` : '-';
+        }
+
+        function resizeOverlay() {
+            const rect = els.video.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            els.overlay.width = Math.max(1, Math.round(rect.width * dpr));
+            els.overlay.height = Math.max(1, Math.round(rect.height * dpr));
+            els.overlay.style.width = `${rect.width}px`;
+            els.overlay.style.height = `${rect.height}px`;
+            drawOverlay();
+        }
+
+        function drawOverlay() {
+            const ctx = els.overlay.getContext('2d');
+            const rect = els.video.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.clearRect(0, 0, els.overlay.width, els.overlay.height);
+
+            if (!els.showOverlay.checked || !state.latestPayload?.faces?.length || !state.latestPayload?.source) {
+                return;
+            }
+
+            const source = state.latestPayload.source;
+            const scaleX = rect.width / source.width;
+            const scaleY = rect.height / source.height;
+
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            ctx.lineWidth = 2;
+            ctx.font = '13px Inter, sans-serif';
+            ctx.textBaseline = 'top';
+
+            state.latestPayload.faces.forEach((face) => {
+                const x = face.area.x * scaleX;
+                const y = face.area.y * scaleY;
+                const w = face.area.w * scaleX;
+                const h = face.area.h * scaleY;
+                const label = `${face.person_name ? face.person_name + ' · ' : ''}${EMOTION_LABELS[face.emotion] || face.emotion} ${face.e_conf}% · Q${Math.round((face.quality_score || 0) * 100)}`;
+                const labelWidth = ctx.measureText(label).width + 18;
+
+                ctx.strokeStyle = '#5ab7ff';
+                ctx.fillStyle = 'rgba(90, 183, 255, 0.12)';
+                ctx.strokeRect(x, y, w, h);
+                ctx.fillRect(x, y, w, h);
+
+                ctx.fillStyle = '#08111f';
+                ctx.fillRect(x, Math.max(0, y - 28), labelWidth, 24);
+                ctx.fillStyle = '#f3f7ff';
+                ctx.fillText(label, x + 9, Math.max(3, y - 24));
+            });
+        }
+
+        function renderAll() {
+            renderMetrics();
+            renderDistribution();
+            renderFaces();
+            renderEvents();
+            updateHud();
+            drawOverlay();
+        }
+
+        function setRunningState(running) {
+            state.running = running;
+            els.startBtn.disabled = running;
+            els.stopBtn.disabled = !running;
+            els.videoEmpty.classList.toggle('hidden', running || !!state.stream);
+            setHeroBadges();
+        }
+
+        async function loadConfig() {
+            const response = await fetch('/api/config');
+            if (!response.ok) {
+                throw new Error('配置加载失败');
+            }
+            state.config = await response.json();
+            syncConfigForm(state.config);
+        }
+
+        async function loadStats() {
+            const response = await fetch('/api/stats');
+            if (!response.ok) {
+                throw new Error('统计加载失败');
+            }
+            state.stats = await response.json();
+            renderAll();
+        }
+
+        function collectConfigForm() {
+            return {
+                width: Number(els.widthInput.value),
+                height: Number(els.heightInput.value),
+                fps: Number(els.fpsInput.value),
+                analyze_interval: Number(els.intervalInput.value),
+                chunk_ms: Number(els.chunkInput.value),
+                video_bits_per_second: Number(els.bitrateInput.value),
+                timeout_seconds: Number(els.timeoutInput.value),
+                detector_backend: els.detectorSelect.value,
+                smoothing_enabled: els.smoothingEnabledSelect.value === 'true',
+                smoothing_window: Number(els.smoothingWindowInput.value),
+                smoothing_sigma: Number(els.smoothingSigmaInput.value),
+                quality_penalty_enabled: els.qualityPenaltySelect.value === 'true',
+                continuity_no_face_gap: Number(els.noFaceGapInput.value),
+                continuity_frame_diff_threshold: Number(els.frameDiffInput.value),
+                identity_enabled: els.identityEnabledSelect.value === 'true',
+                identity_threshold: Number(els.identityThresholdInput.value),
+                adapter_enabled: els.adapterEnabledSelect.value === 'true',
+                adapter_blend: Number(els.adapterBlendInput.value),
+            };
+        }
+
+        function sleep(ms) {
+            return new Promise((resolve) => setTimeout(resolve, ms));
+        }
+
+        async function saveConfig() {
+            const payload = collectConfigForm();
+            const shouldRestart = state.running;
+            els.saveConfigBtn.disabled = true;
+            try {
+                const response = await fetch('/api/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.detail || data.message || '配置保存失败');
+                }
+                state.config = data.config;
+                syncConfigForm(state.config);
+                if (shouldRestart) {
+                    els.configHint.textContent = '配置已保存，正在按新参数重启识别。';
+                    setStatus('warning', '配置已更新，正在重启视频流');
+                    stopStreaming(false);
+                    await sleep(700);
+                    await startStreaming();
+                    setStatus('connected', '配置已生效，识别已重新启动');
+                } else {
+                    els.configHint.textContent = data.message;
+                    setStatus('connected', '配置已更新');
+                }
+            } catch (error) {
+                setStatus('error', `配置保存失败: ${error.message}`);
+            } finally {
+                els.saveConfigBtn.disabled = false;
+            }
+        }
+
+        async function resetStats() {
+            try {
+                const response = await fetch('/api/stats/reset', { method: 'POST' });
+                const data = await response.json();
+                state.stats = data.stats;
+                state.latestPayload = null;
+                renderAll();
+                setStatus('connected', '统计已清空');
+            } catch (error) {
+                setStatus('error', `统计重置失败: ${error.message}`);
+            }
+        }
+
+        async function exportStats() {
+            try {
+                const response = await fetch('/api/stats/export');
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'deepface-stats.json';
+                a.click();
+                URL.revokeObjectURL(url);
+            } catch (error) {
+                setStatus('error', `导出失败: ${error.message}`);
+            }
+        }
+
+        function renderProfiles() {
+            const profiles = state.profiles || [];
+            if (!profiles.length) {
+                els.profileSelect.innerHTML = '<option value="">暂无档案</option>';
+                els.profileHint.textContent = '暂无人物档案。先输入名称并创建，再采集当前画面做人脸建档。';
+                els.profileMetrics.textContent = '暂无样本分布。';
+                return;
+            }
+            const current = els.profileSelect.value;
+            els.profileSelect.innerHTML = profiles.map((profile) => {
+                const adapter = profile.adapter_available ? ' / 已训练' : ' / 未训练';
+                return `<option value="${profile.person_id}">${profile.name} · faces=${profile.num_embeddings || 0} · samples=${profile.num_samples || 0}${adapter}</option>`;
+            }).join('');
+            if (profiles.some((p) => p.person_id === current)) {
+                els.profileSelect.value = current;
+            }
+            els.profileHint.textContent = `已加载 ${profiles.length} 个人物档案。建档数据仅保存在本机 websocket-demo/data/face_profiles。`;
+            renderProfileMetrics();
+        }
+
+        function selectedProfile() {
+            const personId = selectedProfileId();
+            return (state.profiles || []).find((profile) => profile.person_id === personId) || null;
+        }
+
+        function renderProfileMetrics() {
+            const profile = selectedProfile();
+            if (!profile) {
+                els.profileMetrics.textContent = '请选择一个人物档案查看样本分布与 adapter 验证指标。';
+                return;
+            }
+            const summary = profile.sample_summary || {};
+            const dist = summary.label_distribution || {};
+            const distText = EMOTION_ORDER
+                .map((emotion) => `${emotion}:${dist[emotion] || 0}`)
+                .join('  ');
+            const adapter = profile.adapter_metadata || {};
+            const loo = adapter.leave_one_out_accuracy ?? '未训练/未计算';
+            const trainAcc = adapter.train_accuracy ?? '未训练';
+            const warnings = (adapter.validation_warnings || summary.warnings || []).join('；') || '暂无明显风险。';
+            els.profileMetrics.textContent = `样本分布：${distText}；总数=${summary.total || 0}；train_acc=${trainAcc}；leave-one-out=${loo}；提示：${warnings}`;
+        }
+
+        async function loadProfiles() {
+            const response = await fetch('/api/profiles');
+            if (!response.ok) {
+                throw new Error('人物档案加载失败');
+            }
+            const data = await response.json();
+            state.profiles = data.profiles || [];
+            renderProfiles();
+        }
+
+        async function createProfile() {
+            const name = els.profileNameInput.value.trim();
+            if (!name) {
+                els.profileHint.textContent = '请先输入人物名称。';
+                return;
+            }
+            try {
+                const response = await fetch('/api/profiles', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name }),
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.detail || data.message || '创建失败');
+                }
+                state.profiles = data.profiles || [];
+                renderProfiles();
+                els.profileSelect.value = data.profile.person_id;
+                els.profileHint.textContent = `已创建档案：${data.profile.name}`;
+            } catch (error) {
+                els.profileHint.textContent = `创建档案失败：${error.message}`;
+            }
+        }
+
+        function selectedProfileId() {
+            return els.profileSelect.value || '';
+        }
+
+        function captureVideoFrameBase64() {
+            if (!els.video.videoWidth || !els.video.videoHeight) {
+                throw new Error('摄像头画面尚未准备好');
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = els.video.videoWidth;
+            canvas.height = els.video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(els.video, 0, 0, canvas.width, canvas.height);
+            return canvas.toDataURL('image/jpeg', 0.92);
+        }
+
+        function captureCurrentFaceCropBase64() {
+            if (!els.video.videoWidth || !els.video.videoHeight) {
+                throw new Error('摄像头画面尚未准备好');
+            }
+            const face = state.latestPayload?.faces?.[0];
+            const area = face?.area;
+            if (!area || !area.w || !area.h) {
+                return captureVideoFrameBase64();
+            }
+
+            const source = state.latestPayload?.source || {};
+            const sourceW = source.width || els.video.videoWidth;
+            const sourceH = source.height || els.video.videoHeight;
+            const scaleX = els.video.videoWidth / sourceW;
+            const scaleY = els.video.videoHeight / sourceH;
+            const padRatio = 0.18;
+            const padX = area.w * scaleX * padRatio;
+            const padY = area.h * scaleY * padRatio;
+            const sx = Math.max(0, area.x * scaleX - padX);
+            const sy = Math.max(0, area.y * scaleY - padY);
+            const sw = Math.min(els.video.videoWidth - sx, area.w * scaleX + 2 * padX);
+            const sh = Math.min(els.video.videoHeight - sy, area.h * scaleY + 2 * padY);
+            if (sw < 24 || sh < 24) {
+                return captureVideoFrameBase64();
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.round(sw);
+            canvas.height = Math.round(sh);
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(els.video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+            return canvas.toDataURL('image/jpeg', 0.94);
+        }
+
+        async function captureFaceForProfile() {
+            const personId = selectedProfileId();
+            if (!personId) {
+                els.profileHint.textContent = '请先选择人物档案。';
+                return;
+            }
+            try {
+                const image_base64 = captureCurrentFaceCropBase64();
+                const response = await fetch(`/api/profiles/${encodeURIComponent(personId)}/face`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image_base64 }),
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.detail || data.message || '采集失败');
+                }
+                state.profiles = data.profiles || [];
+                renderProfiles();
+                els.profileSelect.value = personId;
+                els.profileHint.textContent = `人脸建档成功：当前已有 ${data.result.num_embeddings} 个 embedding。`;
+            } catch (error) {
+                els.profileHint.textContent = `人脸建档失败：${error.message}`;
+            }
+        }
+
+        async function postEmotionSample(personId, label, face, minQuality = 0) {
+            if (!face || !face.raw_emotion_probs) {
+                throw new Error('当前没有可用识别结果，先开始识别并保持人脸清晰。');
+            }
+            const quality = Number(face.quality_score ?? 1.0);
+            if (quality < minQuality) {
+                throw new Error(`当前帧质量分 ${quality.toFixed(2)} 低于阈值 ${minQuality.toFixed(2)}，已跳过。`);
+            }
+            const response = await fetch(`/api/profiles/${encodeURIComponent(personId)}/sample`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    label,
+                    emotion_probs: face.raw_emotion_probs,
+                    quality_score: quality,
+                }),
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.detail || data.message || '保存失败');
+            }
+            state.profiles = data.profiles || [];
+            renderProfiles();
+            els.profileSelect.value = personId;
+            renderProfileMetrics();
+            return data;
+        }
+
+        async function addCurrentEmotionSample() {
+            const personId = selectedProfileId();
+            const face = state.latestPayload?.faces?.[0];
+            if (!personId) {
+                els.profileHint.textContent = '请先选择人物档案。';
+                return;
+            }
+            const label = els.sampleLabelSelect.value;
+            try {
+                const data = await postEmotionSample(personId, label, face, 0);
+                els.profileHint.textContent = `已保存 ${label} 样本；当前样本数 ${data.result.num_samples}。`;
+            } catch (error) {
+                els.profileHint.textContent = `保存样本失败：${error.message}`;
+            }
+        }
+
+        async function collectEmotionSamplesForDuration() {
+            const personId = selectedProfileId();
+            if (!personId) {
+                els.profileHint.textContent = '请先选择人物档案。';
+                return;
+            }
+            if (state.samplingActive) {
+                return;
+            }
+            const label = els.sampleLabelSelect.value;
+            const durationMs = Math.max(2000, Math.min(20000, Number(els.sampleDurationInput.value || 5) * 1000));
+            const minQuality = Math.max(0, Math.min(1, Number(els.sampleQualityInput.value || 0.55)));
+            const intervalMs = 450;
+            const startedAt = Date.now();
+            let saved = 0;
+            let skipped = 0;
+            state.samplingActive = true;
+            els.batchSampleBtn.disabled = true;
+            els.addSampleBtn.disabled = true;
+            els.trainAdapterBtn.disabled = true;
+
+            const tick = async () => {
+                if (!state.samplingActive) {
+                    return;
+                }
+                const elapsed = Date.now() - startedAt;
+                if (elapsed >= durationMs) {
+                    state.samplingActive = false;
+                    els.batchSampleBtn.disabled = false;
+                    els.addSampleBtn.disabled = false;
+                    els.trainAdapterBtn.disabled = false;
+                    els.profileHint.textContent = `连续采样完成：label=${label}，保存 ${saved} 条，跳过 ${skipped} 条。建议每个类别至少 5 条，总数至少 20 条。`;
+                    await loadProfiles();
+                    els.profileSelect.value = personId;
+                    renderProfileMetrics();
+                    return;
+                }
+                try {
+                    const face = state.latestPayload?.faces?.[0];
+                    await postEmotionSample(personId, label, face, minQuality);
+                    saved += 1;
+                } catch (error) {
+                    skipped += 1;
+                }
+                els.profileHint.textContent = `连续采样中：${Math.round((elapsed / durationMs) * 100)}%，label=${label}，已保存 ${saved}，跳过 ${skipped}。`;
+                window.setTimeout(tick, intervalMs);
+            };
+            tick();
+        }
+
+        async function trainSelectedAdapter() {
+            const personId = selectedProfileId();
+            if (!personId) {
+                els.profileHint.textContent = '请先选择人物档案。';
+                return;
+            }
+            try {
+                els.trainAdapterBtn.disabled = true;
+                els.profileHint.textContent = '正在训练个人适配器……';
+                const response = await fetch(`/api/profiles/${encodeURIComponent(personId)}/train`, { method: 'POST' });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.detail || data.message || '训练失败');
+                }
+                state.profiles = data.profiles || [];
+                renderProfiles();
+                els.profileSelect.value = personId;
+                const loo = data.adapter.leave_one_out_accuracy ?? '未计算';
+                const warnings = (data.adapter.validation_warnings || []).join('；') || '暂无明显风险。';
+                els.profileHint.textContent = `训练完成：samples=${data.adapter.num_samples}, train_acc=${data.adapter.train_accuracy}, leave-one-out=${loo}, loss=${data.adapter.loss}。${warnings}`;
+                renderProfileMetrics();
+            } catch (error) {
+                els.profileHint.textContent = `训练失败：${error.message}`;
+            } finally {
+                els.trainAdapterBtn.disabled = false;
+            }
+        }
+
+        function wsUrl() {
+            const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
+            return `${protocol}://${location.host}/ws`;
+        }
+
+        async function startStreaming() {
+            if (state.running) {
+                return;
+            }
+            if (!state.config) {
+                await loadConfig();
+            }
+
+            try {
+                setStatus('', '正在申请摄像头并建立连接');
+                const config = state.config;
+                state.autoReconnect = true;
+                state.stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        width: { ideal: config.width },
+                        height: { ideal: config.height },
+                        frameRate: { ideal: config.fps, max: config.fps + 2 },
+                        facingMode: 'user'
+                    },
+                    audio: false
+                });
+                els.video.srcObject = state.stream;
+                els.videoEmpty.classList.add('hidden');
+                await new Promise((resolve) => {
+                    els.video.onloadedmetadata = () => {
+                        els.video.play();
+                        resizeOverlay();
+                        resolve();
+                    };
+                });
+
+                const recorderOptions = {
+                    mimeType: 'video/webm;codecs=vp8',
+                    videoBitsPerSecond: config.video_bits_per_second,
+                };
+                if (!MediaRecorder.isTypeSupported(recorderOptions.mimeType)) {
+                    throw new Error('浏览器不支持 video/webm;codecs=vp8');
+                }
+
+                state.mediaRecorder = new MediaRecorder(state.stream, recorderOptions);
+                state.ws = new WebSocket(wsUrl());
+                state.ws.onopen = () => {
+                    setRunningState(true);
+                    setStatus('connected', 'WebSocket 已连接，正在传输视频流');
+                    state.reconnectAttempts = 0;
+                    state.mediaRecorder.start(config.chunk_ms);
+                };
+
+                state.ws.onmessage = (event) => {
+                    const payload = JSON.parse(event.data);
+                    if (payload.type === 'session') {
+                        state.config = payload.config;
+                        state.stats = payload.stats;
+                        syncConfigForm(state.config);
+                        renderAll();
+                        return;
+                    }
+                    if (payload.stats) {
+                        state.stats = payload.stats;
+                    }
+                    if (payload.config) {
+                        state.config = payload.config;
+                        setHeroBadges();
+                    }
+                    if (payload.type === 'error') {
+                        setStatus('error', payload.message || '服务端返回错误');
+                        return;
+                    }
+                    state.latestPayload = payload;
+                    if (payload.type === 'no_face') {
+                        setStatus('warning', payload.message || '当前未检测到人脸');
+                    } else {
+                        setStatus('connected', `识别正常：当前检测到 ${payload.count} 张人脸`);
+                    }
+                    renderAll();
+                };
+
+                state.ws.onerror = () => {
+                    setStatus('error', 'WebSocket 通信异常');
+                };
+
+                state.ws.onclose = () => {
+                    setRunningState(false);
+                    if (state.mediaRecorder?.state !== 'inactive') {
+                        state.mediaRecorder.stop();
+                    }
+                    if (state.autoReconnect && state.reconnectAttempts < state.maxReconnectAttempts) {
+                        state.reconnectAttempts += 1;
+                        setStatus('warning', `连接中断，准备重连 (${state.reconnectAttempts}/${state.maxReconnectAttempts})`);
+                        setTimeout(() => startStreaming(), 1600);
+                    } else {
+                        setStatus('', '会话已停止');
+                    }
+                };
+
+                state.mediaRecorder.ondataavailable = async (event) => {
+                    if (!event.data || event.data.size === 0 || state.ws?.readyState !== WebSocket.OPEN) {
+                        return;
+                    }
+                    const buffer = await event.data.arrayBuffer();
+                    state.ws.send(buffer);
+                };
+
+                state.mediaRecorder.onerror = () => {
+                    setStatus('error', 'MediaRecorder 发生错误');
+                    stopStreaming();
+                };
+            } catch (error) {
+                setStatus('error', `启动失败: ${error.message}`);
+                setRunningState(false);
+                state.autoReconnect = false;
+                stopStreaming(false);
+            }
+        }
+
+        function stopStreaming(closeStatus = true) {
+            state.autoReconnect = false;
+            if (state.mediaRecorder && state.mediaRecorder.state !== 'inactive') {
+                state.mediaRecorder.stop();
+            }
+            if (state.ws && state.ws.readyState === WebSocket.OPEN) {
+                state.ws.close();
+            }
+            if (state.stream) {
+                state.stream.getTracks().forEach((track) => track.stop());
+            }
+            state.mediaRecorder = null;
+            state.ws = null;
+            state.stream = null;
+            els.video.srcObject = null;
+            els.videoEmpty.classList.remove('hidden');
+            setRunningState(false);
+            if (closeStatus) {
+                setStatus('', '识别已停止');
+            }
+            drawOverlay();
+        }
+
+        function bindEvents() {
+            els.startBtn.addEventListener('click', startStreaming);
+            els.stopBtn.addEventListener('click', () => stopStreaming(true));
+            els.resetBtn.addEventListener('click', resetStats);
+            els.exportBtn.addEventListener('click', exportStats);
+            els.saveConfigBtn.addEventListener('click', saveConfig);
+            els.reloadConfigBtn.addEventListener('click', async () => {
+                await loadConfig();
+                setStatus('connected', '配置已重新读取');
+            });
+            els.showOverlay.addEventListener('change', drawOverlay);
+            els.showStatsPanel.addEventListener('change', () => {
+                els.statsSection.style.display = els.showStatsPanel.checked ? 'grid' : 'none';
+            });
+            els.refreshProfilesBtn.addEventListener('click', loadProfiles);
+            els.createProfileBtn.addEventListener('click', createProfile);
+            els.profileSelect.addEventListener('change', renderProfileMetrics);
+            els.captureFaceBtn.addEventListener('click', captureFaceForProfile);
+            els.addSampleBtn.addEventListener('click', addCurrentEmotionSample);
+            els.batchSampleBtn.addEventListener('click', collectEmotionSamplesForDuration);
+            els.trainAdapterBtn.addEventListener('click', trainSelectedAdapter);
+            window.addEventListener('resize', resizeOverlay);
+        }
+
+        async function bootstrap() {
+            if (!navigator.mediaDevices || !window.MediaRecorder) {
+                setStatus('error', '当前浏览器不支持 MediaRecorder 或摄像头能力');
+                els.startBtn.disabled = true;
+                return;
+            }
+            bindEvents();
+            try {
+                await Promise.all([loadConfig(), loadStats(), loadProfiles()]);
+                renderAll();
+                setStatus('', '配置已加载，等待启动识别');
+            } catch (error) {
+                setStatus('error', `初始化失败: ${error.message}`);
+            }
+        }
+
+        bootstrap();
+    </script>
+</body>
+
+</html>

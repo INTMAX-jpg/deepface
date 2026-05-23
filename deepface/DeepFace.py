@@ -588,6 +588,55 @@ def stream(
     )
 
 
+def stream_emotion(
+    detector_backend: str = "opencv",
+    source: Any = 0,
+    process_width: int = 640,
+    emotion_interval: int = 3,
+    face_threshold: int = 130,
+    anti_spoofing: bool = False,
+    output_path: Optional[str] = None,
+) -> None:
+    """
+    Run lightweight real time facial emotion analysis.
+
+    This keeps the original stream API untouched, skips facial recognition and
+    age / gender / race analysis, and runs detection on a resized processing frame.
+
+    Args:
+        detector_backend (string): face detector backend. Options: 'opencv', 'retinaface',
+            'mtcnn', 'ssd', 'dlib', 'mediapipe', 'yolov8', 'yolov11n', 'yolov11s', 'yolov11m',
+            'centerface' or 'skip' (default is opencv).
+
+        source (Any): The source for the video stream (default is 0, which represents the
+            default camera).
+
+        process_width (int): Maximum frame width used for face detection. The original frame
+            is preserved for display.
+
+        emotion_interval (int): Run face detection and emotion inference once every N frames.
+            The latest result is reused for intermediate display frames.
+
+        face_threshold (int): Minimum face width in original-frame coordinates.
+
+        anti_spoofing (boolean): Flag to enable anti spoofing (default is False).
+
+        output_path (str): Path to save the output video. If None, no video is saved.
+
+    Returns:
+        None
+    """
+    streaming.emotion_analysis(
+        detector_backend=detector_backend,
+        source=source,
+        process_width=process_width,
+        emotion_interval=emotion_interval,
+        face_threshold=face_threshold,
+        anti_spoofing=anti_spoofing,
+        output_path=output_path,
+    )
+
+
 def extract_faces(
     img_path: Union[str, NDArray[Any], IO[bytes], List[str], List[NDArray[Any]], List[IO[bytes]]],
     detector_backend: str = "opencv",

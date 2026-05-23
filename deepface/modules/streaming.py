@@ -223,6 +223,150 @@ def analysis(
     cv2.destroyAllWindows()
 
 
+def emotion_analysis(
+    detector_backend: str = "opencv",
+    source: Any = 0,
+    process_width: int = 640,
+    emotion_interval: int = 3,
+    face_threshold: int = 130,
+    anti_spoofing: bool = False,
+    output_path: Optional[str] = None,
+) -> None:
+    """
+    Run a lightweight real time facial emotion analysis stream.
+
+    This path intentionally skips face recognition and age / gender / race analysis.
+    It keeps the original camera frame for display, but detects faces on a resized
+    processing frame and maps detected coordinates back to the original frame.
+    """
+    DeepFace.build_model(task="facial_attribute", model_name="Emotion")
+    logger.info("Emotion model is just built")
+
+    process_width = max(process_width, 1)
+    emotion_interval = max(emotion_interval, 1)
+
+    cap = cv2.VideoCapture(source if isinstance(source, str) else int(source))
+    if not cap.isOpened():
+        logger.error(f"Cannot open video source: {source}")
+        return
+
+    cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    fps = cap.get(cv2.CAP_PROP_FPS)
+
+    if output_path and os.path.dirname(output_path):
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    video_writer = (
+        cv2.VideoWriter(
+            output_path,
+            cv2.VideoWriter_fourcc(*"mp4v"),  # type: ignore[attr-defined]
+            fps,
+            (width, height),
+        )
+        if output_path
+        else None
+    )
+
+    frame_index = 0
+    last_faces_coordinates: List[Tuple[int, int, int, int, bool, float]] = []
+    last_emotions: List[Dict[str, float]] = []
+
+    while True:
+        has_frame, img = cap.read()
+        if not has_frame:
+            break
+
+        display_img = img.copy()  # type: ignore[union-attr]
+
+        if frame_index % emotion_interval == 0:
+            orig_h, orig_w = img.shape[:2]  # type: ignore[union-attr]
+
+            if orig_w > process_width:
+                scale = process_width / orig_w
+                process_frame = cv2.resize(img, (process_width, int(orig_h * scale)))
+            else:
+                scale = 1.0
+                process_frame = img
+
+            process_threshold = max(30, int(face_threshold * scale))
+            process_faces_coordinates = grab_facial_areas(
+                img=process_frame,
+                detector_backend=detector_backend,
+                threshold=process_threshold,
+                anti_spoofing=anti_spoofing,
+            )
+
+            last_faces_coordinates = [
+                (
+                    int(x / scale),
+                    int(y / scale),
+                    int(w / scale),
+                    int(h / scale),
+                    is_real,
+                    antispoof_score,
+                )
+                for x, y, w, h, is_real, antispoof_score in process_faces_coordinates
+            ]
+            detected_faces = extract_facial_areas(
+                img=img,
+                faces_coordinates=last_faces_coordinates,
+            )
+
+            last_emotions = []
+            for detected_face in detected_faces:
+                demographies: List[Dict[str, Any]] = cast(
+                    List[Dict[str, Any]],
+                    DeepFace.analyze(
+                        img_path=detected_face,
+                        actions=("emotion",),
+                        detector_backend="skip",
+                        enforce_detection=False,
+                        silent=True,
+                    ),
+                )
+
+                if len(demographies) == 0:
+                    last_emotions.append({})
+                    continue
+
+                last_emotions.append(demographies[0]["emotion"])
+
+        display_img = highlight_facial_areas(
+            img=display_img,
+            faces_coordinates=last_faces_coordinates,
+            anti_spoofing=anti_spoofing,
+        )
+
+        for idx, (x, y, w, h, is_real, antispoof_score) in enumerate(last_faces_coordinates):
+            if idx >= len(last_emotions) or not last_emotions[idx]:
+                continue
+
+            display_img = overlay_emotion(
+                img=display_img,
+                emotion_probas=last_emotions[idx],
+                x=x,
+                y=y,
+                w=w,
+                h=h,
+            )
+
+        if video_writer:
+            video_writer.write(display_img)
+
+        cv2.imshow("img", display_img)
+        if cv2.waitKey(1) & 0xFF == ord("q"):
+            break
+
+        frame_index += 1
+
+    cap.release()
+    if video_writer:
+        video_writer.release()
+    cv2.destroyAllWindows()
+
+
 def build_facial_recognition_model(model_name: str) -> None:
     """
     Build facial recognition model

@@ -177,6 +177,8 @@ def analyze_detected_faces(frame: np.ndarray, detector_backend: str, align: bool
         detector_backend=detector_backend,
         enforce_detection=False,
         align=align,
+        color_face="bgr",
+        normalize_face=False,
     )
 
     analyzed_faces: list[Dict[str, Any]] = []

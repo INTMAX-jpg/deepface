@@ -1,5 +1,95 @@
 # deepface
 
+## 本仓库实时情绪分析 Web 控制台
+
+本仓库在 DeepFace 原始能力基础上，补充了一个面向摄像头实时视频的 WebSocket 情绪分析控制台，代码位于 `websocket-demo/`。它的目标是在不重新训练 DeepFace 核心模型、不替换 DeepFace 主依赖的前提下，提供更流畅的实时表情识别、可配置运行参数、情绪统计展示和个体化表情建档流程。
+
+### 现有功能
+
+- 浏览器摄像头采集：前端通过 MediaRecorder 采集 WebM 视频流，经 WebSocket 发送到后端。
+- 后端实时分析：FastAPI 服务接收视频块，使用 FFmpeg 解码并调用 DeepFace 做人脸检测与情绪分析。
+- 低延迟刷新：服务端保留最新帧，减少历史帧堆积导致的人脸框滞后。
+- 仅表情分析：实时流程聚焦 emotion，不做年龄、性别、种族分析。
+- 运行配置热保存：页面可修改分辨率、FPS、分析间隔、检测后端、平滑窗口、身份阈值等参数，保存后可按新配置重新加载。
+- 情绪稳定化：包含平滑、质量惩罚、连续性判断，降低单帧抖动。
+- 个体化表情建档：支持创建人物档案、采集当前人脸、保存人工标注样本，并训练个人适配器。
+- 双界面模式：
+  - 纯享界面：只保留开始/停止、实时视频舞台、情绪分布统计，适合展示和普通用户使用。
+  - 工程师界面：保留会话概览、运行配置、个体化表情建档、统计导出等调试功能。
+- 统计导出：支持清空统计和导出 JSON，便于做效果对比和实验记录。
+
+### 环境准备
+
+推荐使用已经配置好的 `tux` conda 环境：
+
+```powershell
+cd C:\Users\lenovo\Desktop\deepface
+conda activate tux
+python -m pip install -U pip setuptools wheel
+python -m pip install -e . tf-keras
+python -m pip install -r websocket-demo\requirements.txt
+```
+
+如果系统没有安装 FFmpeg，`websocket-demo/requirements.txt` 中的 `imageio-ffmpeg` 会提供兜底的 FFmpeg 可执行文件。
+
+### 启动 Web 控制台
+
+```powershell
+cd C:\Users\lenovo\Desktop\deepface\websocket-demo
+conda activate tux
+$env:DEEPFACE_HOME="C:\Users\lenovo\Desktop\deepface\.deepface_home"
+$env:PYTHONIOENCODING="utf-8"
+python -m uvicorn server:app --host 127.0.0.1 --port 8765
+```
+
+启动后在浏览器打开：
+
+```text
+http://127.0.0.1:8765
+```
+
+如果 `8765` 端口被占用，可以换一个端口，例如：
+
+```powershell
+python -m uvicorn server:app --host 127.0.0.1 --port 8766
+```
+
+### 页面使用方式
+
+1. 打开页面后，点击右上角“工程师界面”滑动开关切换模式。
+2. 在纯享界面中，点击“开始识别”授权摄像头，即可查看实时视频和情绪分布统计。
+3. 在工程师界面中：
+   - “会话概览”展示当前连接、累计帧数、分析次数等摘要。
+   - “运行配置”为折叠栏，展开后可调整运行参数并点击“保存配置”。
+   - “个体化表情建档”为折叠栏，展开后可创建人物档案、采集人脸、保存表情样本和训练个人适配器。
+   - “清空统计”和“导出 JSON”用于实验记录。
+4. 识别结束后点击“停止识别”释放摄像头和 WebSocket 连接。
+
+### 常用参数说明
+
+- `width` / `height`：浏览器采集视频分辨率。
+- `fps`：前端采集帧率。
+- `analyze_interval`：每隔多少帧执行一次 DeepFace 分析，数值越小刷新越及时，但 CPU/GPU 压力越大。
+- `detector_backend`：人脸检测后端，常用 `opencv`、`mediapipe`、`retinaface`。
+- `chunk_ms`：浏览器视频分片间隔，较小有利于降低传输延迟。
+- `smoothing_enabled` / `smoothing_window` / `smoothing_sigma`：情绪结果平滑配置。
+- `identity_enabled` / `identity_threshold`：是否启用人物档案匹配及匹配阈值。
+- `adapter_enabled` / `adapter_blend`：是否启用个人表情适配器及融合比例。
+
+### 原生 DeepFace 摄像头命令
+
+如果只想运行 DeepFace 原生实时窗口，而不是 Web 控制台，可以使用：
+
+```powershell
+cd C:\Users\lenovo\Desktop\deepface
+conda activate tux
+New-Item -ItemType Directory -Force .\face_db
+$env:DEEPFACE_HOME="$PWD\.deepface_home"
+python -c "from deepface import DeepFace; DeepFace.stream(db_path='face_db', source=0, detector_backend='opencv', enable_face_analysis=True)"
+```
+
+运行过程中按 `q` 退出 OpenCV 视频窗口。
+
 <div align="center">
 
 [![Downloads](https://static.pepy.tech/personalized-badge/deepface?period=total&units=international_system&left_color=grey&right_color=blue&left_text=downloads)](https://pepy.tech/project/deepface)

@@ -8,7 +8,7 @@
     <style>
         :root {
             color-scheme: dark;
-            --bg: #08111f;
+            --bg: #f3ead6;
             --bg-elevated: rgba(11, 22, 40, 0.82);
             --bg-soft: rgba(18, 32, 56, 0.72);
             --line: rgba(255, 255, 255, 0.08);
@@ -34,10 +34,7 @@
             min-height: 100vh;
             font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
             color: var(--text);
-            background:
-                radial-gradient(circle at top left, rgba(90, 183, 255, 0.18), transparent 32%),
-                radial-gradient(circle at top right, rgba(126, 255, 196, 0.1), transparent 26%),
-                linear-gradient(180deg, #08111f 0%, #0b1628 50%, #08111f 100%);
+            background: linear-gradient(180deg, #f6eedc 0%, #efe1c4 100%);
         }
 
         .page {
@@ -59,12 +56,13 @@
             font-size: clamp(2rem, 4vw, 3.1rem);
             line-height: 1.05;
             letter-spacing: -0.03em;
+            color: #192331;
         }
 
         .hero-copy p {
             margin: 12px 0 0;
             max-width: 780px;
-            color: var(--text-muted);
+            color: #52606f;
             font-size: 1rem;
         }
 
@@ -78,9 +76,9 @@
         .badge {
             padding: 10px 14px;
             border-radius: 999px;
-            border: 1px solid var(--line);
-            background: rgba(255, 255, 255, 0.04);
-            color: var(--text-muted);
+            border: 1px solid rgba(11, 22, 40, 0.14);
+            background: rgba(11, 22, 40, 0.78);
+            color: #e8eef7;
             font-size: 0.92rem;
             white-space: nowrap;
         }
@@ -91,10 +89,98 @@
             background: rgba(126, 255, 196, 0.08);
         }
 
+        .mode-switch {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            border: 1px solid rgba(11, 22, 40, 0.16);
+            background: rgba(11, 22, 40, 0.82);
+            color: #eef5ff;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .mode-switch input {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .mode-track {
+            position: relative;
+            width: 48px;
+            height: 26px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: background 0.18s ease, border-color 0.18s ease;
+        }
+
+        .mode-track::after {
+            content: "";
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--text);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.26);
+            transition: transform 0.18s ease, background 0.18s ease;
+        }
+
+        .mode-switch input:checked + .mode-track {
+            background: rgba(126, 255, 196, 0.24);
+            border-color: rgba(126, 255, 196, 0.36);
+        }
+
+        .mode-switch input:checked + .mode-track::after {
+            transform: translateX(22px);
+            background: var(--accent-strong);
+        }
+
+        .mode-label {
+            color: #d6e2f2;
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+
+        .mode-state {
+            min-width: 1.8em;
+            text-align: center;
+            font-weight: 700;
+        }
+
+        .page.enjoy-mode .engineer-only {
+            display: none !important;
+        }
+
+        .page.enjoy-mode .layout {
+            grid-template-columns: minmax(520px, 1.35fr) minmax(320px, 0.65fr);
+            align-items: start;
+        }
+
+        .page.enjoy-mode .video-panel {
+            width: 100%;
+        }
+
+        .page.enjoy-mode .distribution-panel {
+            grid-column: auto;
+            position: sticky;
+            top: 16px;
+        }
+
+        .page.enjoy-mode .controls {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
         .layout {
             display: grid;
-            grid-template-columns: minmax(0, 1.7fr) minmax(360px, 0.95fr);
+            grid-template-columns: minmax(520px, 1.08fr) minmax(520px, 1fr);
             gap: 24px;
+            align-items: start;
         }
 
         .panel {
@@ -157,11 +243,15 @@
 
         .video-stage {
             position: relative;
-            aspect-ratio: 4 / 3;
+            aspect-ratio: 16 / 10;
             border-radius: 24px;
             overflow: hidden;
             background: linear-gradient(180deg, rgba(6, 10, 18, 0.9), rgba(13, 22, 35, 0.95));
             border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .page.enjoy-mode .video-stage {
+            aspect-ratio: 4 / 3;
         }
 
         #video,
@@ -302,6 +392,49 @@
             padding: 22px;
         }
 
+        details.stack {
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .accordion-summary {
+            list-style: none;
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            align-items: center;
+            padding: 20px 22px;
+            cursor: pointer;
+        }
+
+        .accordion-summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .accordion-summary::after {
+            content: "+";
+            width: 30px;
+            height: 30px;
+            border-radius: 999px;
+            display: grid;
+            place-items: center;
+            flex: 0 0 auto;
+            color: var(--accent-strong);
+            border: 1px solid rgba(126, 255, 196, 0.24);
+            background: rgba(126, 255, 196, 0.08);
+            font-size: 1.18rem;
+            line-height: 1;
+        }
+
+        details[open] > .accordion-summary::after {
+            content: "-";
+        }
+
+        .accordion-body {
+            padding: 0 22px 22px;
+            border-top: 1px solid var(--line);
+        }
+
         .metric-grid {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -404,11 +537,8 @@
             accent-color: var(--accent);
         }
 
-        .bottom-grid {
-            display: grid;
-            grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.9fr);
-            gap: 24px;
-            margin-top: 24px;
+        .distribution-panel {
+            grid-column: 1;
         }
 
         .distribution-list,
@@ -506,8 +636,12 @@
 
         @media (max-width: 1180px) {
             .layout,
-            .bottom-grid {
+            .page.enjoy-mode .layout {
                 grid-template-columns: 1fr;
+            }
+
+            .page.enjoy-mode .distribution-panel {
+                position: static;
             }
 
             .aside {
@@ -552,16 +686,22 @@
 </head>
 
 <body>
-    <div class="page">
+    <div class="page" id="pageRoot">
         <section class="hero">
             <div class="hero-copy">
                 <h1>DeepFace 实时情绪分析控制台</h1>
                 <p>当前版本采用浏览器摄像头采集 + WebSocket 传输 + FFmpeg 解码 + DeepFace 检测与逐人脸属性分析，页面集中展示连接状态、实时人脸结果、统计分布与配置参数。</p>
             </div>
             <div class="hero-badges">
+                <label class="mode-switch" title="工程师界面开关">
+                    <span class="mode-label">工程师界面</span>
+                    <input id="engineerModeSwitch" type="checkbox">
+                    <span class="mode-track" aria-hidden="true"></span>
+                    <strong class="mode-state" id="engineerModeText">开</strong>
+                </label>
                 <div class="badge" id="liveBadge">待启动</div>
-                <div class="badge" id="detectorBadge">Detector: retinaface</div>
-                <div class="badge" id="streamBadge">640 x 480 / 10 FPS</div>
+                <div class="badge engineer-only" id="detectorBadge">Detector: retinaface</div>
+                <div class="badge engineer-only" id="streamBadge">640 x 480 / 10 FPS</div>
             </div>
         </section>
 
@@ -595,17 +735,17 @@
                 <div class="controls">
                     <button class="btn btn-primary" id="startBtn">开始识别</button>
                     <button class="btn btn-secondary" id="stopBtn" disabled>停止识别</button>
-                    <button class="btn btn-secondary" id="resetBtn">清空统计</button>
-                    <button class="btn btn-ghost" id="exportBtn">导出 JSON</button>
+                    <button class="btn btn-secondary engineer-only" id="resetBtn">清空统计</button>
+                    <button class="btn btn-ghost engineer-only" id="exportBtn">导出 JSON</button>
                 </div>
 
-                <div class="switch-row">
+                <div class="switch-row engineer-only">
                     <label class="switch"><input type="checkbox" id="showOverlay" checked>显示识别框</label>
                     <label class="switch"><input type="checkbox" id="showStatsPanel" checked>显示统计面板</label>
                 </div>
             </div>
 
-            <aside class="aside">
+            <aside class="aside engineer-only">
                 <section class="panel stack">
                     <div>
                         <h2 class="panel-title">会话概览</h2>
@@ -614,177 +754,173 @@
                     <div class="metric-grid" id="metricGrid"></div>
                 </section>
 
-                <section class="panel stack">
-                    <div>
-                        <h2 class="panel-title">运行配置</h2>
-                        <div class="panel-subtitle">修改参数后点击保存配置；如果正在识别，系统会自动按新配置重启视频流。</div>
+                <details class="panel stack collapsible-panel">
+                    <summary class="accordion-summary">
+                        <div>
+                            <h2 class="panel-title">运行配置</h2>
+                            <div class="panel-subtitle">点击展开修改运行参数，保存后可按新配置重新加载。</div>
+                        </div>
+                    </summary>
+                    <div class="accordion-body">
+                        <div class="settings-grid">
+                            <div class="field">
+                                <label for="widthInput">宽度</label>
+                                <input id="widthInput" type="number" min="320" max="1280" step="1">
+                            </div>
+                            <div class="field">
+                                <label for="heightInput">高度</label>
+                                <input id="heightInput" type="number" min="240" max="960" step="1">
+                            </div>
+                            <div class="field">
+                                <label for="fpsInput">帧率 FPS</label>
+                                <input id="fpsInput" type="number" min="5" max="30" step="1">
+                            </div>
+                            <div class="field">
+                                <label for="intervalInput">分析间隔帧数</label>
+                                <input id="intervalInput" type="number" min="1" max="20" step="1">
+                            </div>
+                            <div class="field">
+                                <label for="chunkInput">切片间隔 ms</label>
+                                <input id="chunkInput" type="number" min="60" max="1000" step="10">
+                            </div>
+                            <div class="field">
+                                <label for="bitrateInput">码率 bps</label>
+                                <input id="bitrateInput" type="number" min="200000" max="5000000" step="10000">
+                            </div>
+                            <div class="field">
+                                <label for="timeoutInput">超时秒数</label>
+                                <input id="timeoutInput" type="number" min="10" max="120" step="1">
+                            </div>
+                            <div class="field">
+                                <label for="detectorSelect">检测后端</label>
+                                <select id="detectorSelect">
+                                    <option value="retinaface">retinaface</option>
+                                    <option value="opencv">opencv</option>
+                                    <option value="mediapipe">mediapipe</option>
+                                    <option value="mtcnn">mtcnn</option>
+                                    <option value="centerface">centerface</option>
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label for="smoothingEnabledSelect">高斯平滑</label>
+                                <select id="smoothingEnabledSelect">
+                                    <option value="true">开启</option>
+                                    <option value="false">关闭</option>
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label for="smoothingWindowInput">平滑窗口 K</label>
+                                <input id="smoothingWindowInput" type="number" min="1" max="20" step="1">
+                            </div>
+                            <div class="field">
+                                <label for="smoothingSigmaInput">高斯 sigma</label>
+                                <input id="smoothingSigmaInput" type="number" min="0.3" max="10" step="0.1">
+                            </div>
+                            <div class="field">
+                                <label for="qualityPenaltySelect">坏帧质量惩罚</label>
+                                <select id="qualityPenaltySelect">
+                                    <option value="true">开启</option>
+                                    <option value="false">关闭</option>
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label for="noFaceGapInput">断裂：连续无脸帧</label>
+                                <input id="noFaceGapInput" type="number" min="1" max="60" step="1">
+                            </div>
+                            <div class="field">
+                                <label for="frameDiffInput">断裂：画面差异阈值</label>
+                                <input id="frameDiffInput" type="number" min="0.05" max="1" step="0.01">
+                            </div>
+                            <div class="field">
+                                <label for="identityEnabledSelect">人脸建档识别</label>
+                                <select id="identityEnabledSelect">
+                                    <option value="true">开启</option>
+                                    <option value="false">关闭</option>
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label for="identityThresholdInput">身份距离阈值</label>
+                                <input id="identityThresholdInput" type="number" min="0.05" max="1.5" step="0.01">
+                            </div>
+                            <div class="field">
+                                <label for="adapterEnabledSelect">个体适配器</label>
+                                <select id="adapterEnabledSelect">
+                                    <option value="true">开启</option>
+                                    <option value="false">关闭</option>
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label for="adapterBlendInput">适配器融合 alpha</label>
+                                <input id="adapterBlendInput" type="number" min="0" max="0.85" step="0.05">
+                            </div>
+                        </div>
+                        <div class="inline-actions">
+                            <button class="btn btn-primary" id="saveConfigBtn">保存配置</button>
+                            <button class="btn btn-ghost" id="reloadConfigBtn">重新读取</button>
+                        </div>
+                        <div class="helper-text" id="configHint">配置尚未加载。</div>
                     </div>
-                    <div class="settings-grid">
-                        <div class="field">
-                            <label for="widthInput">宽度</label>
-                            <input id="widthInput" type="number" min="320" max="1280" step="1">
-                        </div>
-                        <div class="field">
-                            <label for="heightInput">高度</label>
-                            <input id="heightInput" type="number" min="240" max="960" step="1">
-                        </div>
-                        <div class="field">
-                            <label for="fpsInput">帧率 FPS</label>
-                            <input id="fpsInput" type="number" min="5" max="30" step="1">
-                        </div>
-                        <div class="field">
-                            <label for="intervalInput">分析间隔帧数</label>
-                            <input id="intervalInput" type="number" min="1" max="20" step="1">
-                        </div>
-                        <div class="field">
-                            <label for="chunkInput">切片间隔 ms</label>
-                            <input id="chunkInput" type="number" min="60" max="1000" step="10">
-                        </div>
-                        <div class="field">
-                            <label for="bitrateInput">码率 bps</label>
-                            <input id="bitrateInput" type="number" min="200000" max="5000000" step="10000">
-                        </div>
-                        <div class="field">
-                            <label for="timeoutInput">超时秒数</label>
-                            <input id="timeoutInput" type="number" min="10" max="120" step="1">
-                        </div>
-                        <div class="field">
-                            <label for="detectorSelect">检测后端</label>
-                            <select id="detectorSelect">
-                                <option value="retinaface">retinaface</option>
-                                <option value="opencv">opencv</option>
-                                <option value="mediapipe">mediapipe</option>
-                                <option value="mtcnn">mtcnn</option>
-                                <option value="centerface">centerface</option>
-                            </select>
-                        </div>
-                        <div class="field">
-                            <label for="smoothingEnabledSelect">高斯平滑</label>
-                            <select id="smoothingEnabledSelect">
-                                <option value="true">开启</option>
-                                <option value="false">关闭</option>
-                            </select>
-                        </div>
-                        <div class="field">
-                            <label for="smoothingWindowInput">平滑窗口 K</label>
-                            <input id="smoothingWindowInput" type="number" min="1" max="20" step="1">
-                        </div>
-                        <div class="field">
-                            <label for="smoothingSigmaInput">高斯 σ</label>
-                            <input id="smoothingSigmaInput" type="number" min="0.3" max="10" step="0.1">
-                        </div>
-                        <div class="field">
-                            <label for="qualityPenaltySelect">坏帧质量惩罚</label>
-                            <select id="qualityPenaltySelect">
-                                <option value="true">开启</option>
-                                <option value="false">关闭</option>
-                            </select>
-                        </div>
-                        <div class="field">
-                            <label for="noFaceGapInput">断裂：连续无脸帧</label>
-                            <input id="noFaceGapInput" type="number" min="1" max="60" step="1">
-                        </div>
-                        <div class="field">
-                            <label for="frameDiffInput">断裂：画面差异阈值</label>
-                            <input id="frameDiffInput" type="number" min="0.05" max="1" step="0.01">
-                        </div>
-                        <div class="field">
-                            <label for="identityEnabledSelect">人脸建档识别</label>
-                            <select id="identityEnabledSelect">
-                                <option value="true">开启</option>
-                                <option value="false">关闭</option>
-                            </select>
-                        </div>
-                        <div class="field">
-                            <label for="identityThresholdInput">身份距离阈值</label>
-                            <input id="identityThresholdInput" type="number" min="0.05" max="1.5" step="0.01">
-                        </div>
-                        <div class="field">
-                            <label for="adapterEnabledSelect">个体适配器</label>
-                            <select id="adapterEnabledSelect">
-                                <option value="true">开启</option>
-                                <option value="false">关闭</option>
-                            </select>
-                        </div>
-                        <div class="field">
-                            <label for="adapterBlendInput">适配器融合 λ</label>
-                            <input id="adapterBlendInput" type="number" min="0" max="0.85" step="0.05">
-                        </div>
-                    </div>
-                    <div class="inline-actions">
-                        <button class="btn btn-primary" id="saveConfigBtn">保存配置</button>
-                        <button class="btn btn-ghost" id="reloadConfigBtn">重新读取</button>
-                    </div>
-                    <div class="helper-text" id="configHint">配置尚未加载。</div>
-                </section>
+                </details>
 
-                <section class="panel stack">
-                    <div>
-                        <h2 class="panel-title">个体化表情建档</h2>
-                        <div class="panel-subtitle">本地保存人脸 embedding 与手动标注样本；识别到同一人物后，可用个人小模型微调表情输出。</div>
+                <details class="panel stack collapsible-panel">
+                    <summary class="accordion-summary">
+                        <div>
+                            <h2 class="panel-title">个体化表情建档</h2>
+                            <div class="panel-subtitle">点击展开人脸建档、样本保存和个体适配器训练。</div>
+                        </div>
+                    </summary>
+                    <div class="accordion-body">
+                        <div class="settings-grid">
+                            <div class="field">
+                                <label for="profileNameInput">新人物名称</label>
+                                <input id="profileNameInput" type="text" placeholder="例如：实验者A">
+                            </div>
+                            <div class="field">
+                                <label for="profileSelect">当前人物档案</label>
+                                <select id="profileSelect"></select>
+                            </div>
+                            <div class="field">
+                                <label for="sampleLabelSelect">手动表情标签</label>
+                                <select id="sampleLabelSelect">
+                                    <option value="happy">happy / 高兴</option>
+                                    <option value="neutral">neutral / 平静</option>
+                                    <option value="surprise">surprise / 惊讶</option>
+                                    <option value="sad">sad / 悲伤</option>
+                                    <option value="angry">angry / 愤怒</option>
+                                    <option value="fear">fear / 恐惧</option>
+                                    <option value="disgust">disgust / 厌恶</option>
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label for="sampleDurationInput">连续采样时长 / 秒</label>
+                                <input id="sampleDurationInput" type="number" min="2" max="20" step="1" value="5">
+                            </div>
+                            <div class="field">
+                                <label for="sampleQualityInput">最低质量分</label>
+                                <input id="sampleQualityInput" type="number" min="0" max="1" step="0.05" value="0.55">
+                            </div>
+                        </div>
+                        <div class="inline-actions">
+                            <button class="btn btn-secondary" id="refreshProfilesBtn">刷新档案</button>
+                            <button class="btn btn-primary" id="createProfileBtn">创建档案</button>
+                        </div>
+                        <div class="inline-actions">
+                            <button class="btn btn-secondary" id="captureFaceBtn">采集当前画面做人脸建档</button>
+                            <button class="btn btn-secondary" id="addSampleBtn">保存当前识别为标注样本</button>
+                            <button class="btn btn-secondary" id="batchSampleBtn">连续采样 5 秒</button>
+                            <button class="btn btn-primary" id="trainAdapterBtn">训练个人适配器</button>
+                        </div>
+                        <div class="helper-text" id="profileHint">未加载人物档案。提示：每人建议先采集 3~5 张清晰人脸，再为至少 2 类表情各保存数条样本。</div>
+                        <div class="helper-text" id="profileMetrics">样本分布与验证指标将在这里显示。</div>
                     </div>
-                    <div class="settings-grid">
-                        <div class="field">
-                            <label for="profileNameInput">新人物名称</label>
-                            <input id="profileNameInput" type="text" placeholder="例如：实验者A">
-                        </div>
-                        <div class="field">
-                            <label for="profileSelect">当前人物档案</label>
-                            <select id="profileSelect"></select>
-                        </div>
-                        <div class="field">
-                            <label for="sampleLabelSelect">手动表情标签</label>
-                            <select id="sampleLabelSelect">
-                                <option value="happy">happy / 高兴</option>
-                                <option value="neutral">neutral / 平静</option>
-                                <option value="surprise">surprise / 惊讶</option>
-                                <option value="sad">sad / 悲伤</option>
-                                <option value="angry">angry / 愤怒</option>
-                                <option value="fear">fear / 恐惧</option>
-                                <option value="disgust">disgust / 厌恶</option>
-                            </select>
-                        </div>
-                        <div class="field">
-                            <label for="sampleDurationInput">连续采样时长 / 秒</label>
-                            <input id="sampleDurationInput" type="number" min="2" max="20" step="1" value="5">
-                        </div>
-                        <div class="field">
-                            <label for="sampleQualityInput">最低质量分</label>
-                            <input id="sampleQualityInput" type="number" min="0" max="1" step="0.05" value="0.55">
-                        </div>
-                    </div>
-                    <div class="inline-actions">
-                        <button class="btn btn-secondary" id="refreshProfilesBtn">刷新档案</button>
-                        <button class="btn btn-primary" id="createProfileBtn">创建档案</button>
-                    </div>
-                    <div class="inline-actions">
-                        <button class="btn btn-secondary" id="captureFaceBtn">采集当前画面做人脸建档</button>
-                        <button class="btn btn-secondary" id="addSampleBtn">保存当前识别为标注样本</button>
-                        <button class="btn btn-secondary" id="batchSampleBtn">连续采样 5 秒</button>
-                        <button class="btn btn-primary" id="trainAdapterBtn">训练个人适配器</button>
-                    </div>
-                    <div class="helper-text" id="profileHint">未加载人物档案。提示：每人建议先采集 3~5 张清晰人脸，再为至少 2 类表情各保存数条样本。</div>
-                    <div class="helper-text" id="profileMetrics">样本分布与验证指标将在这里显示。</div>
-                </section>
+                </details>
             </aside>
-        </section>
-
-        <section class="bottom-grid" id="statsSection">
-            <section class="panel stack">
+            <section class="panel stack distribution-panel" id="statsSection">
                 <div>
                     <h2 class="panel-title">情绪分布统计</h2>
                     <div class="panel-subtitle">基于已完成分析的人脸主情绪累计结果，便于展示系统稳定性和现场状态变化。</div>
                 </div>
                 <div class="distribution-list" id="distributionList"></div>
-            </section>
-
-            <section class="panel stack">
-                <div>
-                    <h2 class="panel-title">最新识别结果</h2>
-                    <div class="panel-subtitle">展示当前帧中的逐人脸分析结果，并保留最近事件流方便调试与汇报。</div>
-                </div>
-                <div class="face-list" id="faceList"></div>
-                <div class="event-list" id="eventList"></div>
             </section>
         </section>
     </div>
@@ -803,6 +939,7 @@
             reconnectAttempts: 0,
             maxReconnectAttempts: 2,
             autoReconnect: false,
+            viewMode: localStorage.getItem('deepface_view_mode') || 'engineer',
         };
 
         const EMOTION_LABELS = {
@@ -819,6 +956,9 @@
         const EMOTION_ORDER = ['happy', 'neutral', 'surprise', 'sad', 'angry', 'fear', 'disgust'];
 
         const els = {
+            pageRoot: document.getElementById('pageRoot'),
+            engineerModeSwitch: document.getElementById('engineerModeSwitch'),
+            engineerModeText: document.getElementById('engineerModeText'),
             video: document.getElementById('video'),
             overlay: document.getElementById('overlay'),
             videoEmpty: document.getElementById('videoEmpty'),
@@ -895,6 +1035,18 @@
             els.liveBadge.className = `badge ${state.running ? 'live' : ''}`.trim();
         }
 
+        function setViewMode(mode) {
+            state.viewMode = mode === 'enjoy' ? 'enjoy' : 'engineer';
+            localStorage.setItem('deepface_view_mode', state.viewMode);
+            els.pageRoot.classList.toggle('enjoy-mode', state.viewMode === 'enjoy');
+            const engineerEnabled = state.viewMode === 'engineer';
+            els.engineerModeSwitch.checked = engineerEnabled;
+            els.engineerModeText.textContent = engineerEnabled ? '开' : '关';
+            els.engineerModeSwitch.setAttribute('aria-label', engineerEnabled ? '关闭工程师界面' : '开启工程师界面');
+            els.statsSection.style.display = engineerEnabled && !els.showStatsPanel.checked ? 'none' : '';
+            drawOverlay();
+        }
+
         function syncConfigForm(config) {
             els.widthInput.value = config.width;
             els.heightInput.value = config.height;
@@ -961,6 +1113,9 @@
         }
 
         function renderFaces() {
+            if (!els.faceList) {
+                return;
+            }
             const faces = state.latestPayload?.faces || [];
             if (!faces.length) {
                 els.faceList.innerHTML = '<div class="empty-state">最近一次分析没有检测到可用人脸，或尚未开始识别。</div>';
@@ -992,6 +1147,9 @@
         }
 
         function renderEvents() {
+            if (!els.eventList) {
+                return;
+            }
             const events = state.stats?.recent_events || [];
             if (!events.length) {
                 els.eventList.innerHTML = '<div class="empty-state">最近事件流为空。</div>';
@@ -1610,6 +1768,9 @@
         }
 
         function bindEvents() {
+            els.engineerModeSwitch.addEventListener('change', () => {
+                setViewMode(els.engineerModeSwitch.checked ? 'engineer' : 'enjoy');
+            });
             els.startBtn.addEventListener('click', startStreaming);
             els.stopBtn.addEventListener('click', () => stopStreaming(true));
             els.resetBtn.addEventListener('click', resetStats);
@@ -1621,7 +1782,7 @@
             });
             els.showOverlay.addEventListener('change', drawOverlay);
             els.showStatsPanel.addEventListener('change', () => {
-                els.statsSection.style.display = els.showStatsPanel.checked ? 'grid' : 'none';
+                els.statsSection.style.display = els.showStatsPanel.checked ? '' : 'none';
             });
             els.refreshProfilesBtn.addEventListener('click', loadProfiles);
             els.createProfileBtn.addEventListener('click', createProfile);
@@ -1640,6 +1801,7 @@
                 return;
             }
             bindEvents();
+            setViewMode(state.viewMode);
             try {
                 await Promise.all([loadConfig(), loadStats(), loadProfiles()]);
                 renderAll();
